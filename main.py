@@ -1,11 +1,34 @@
-from pynput.keyboard import Key, Listener
 
+import numpy as np
+import matplotlib.pyplot as plt
+from pynput.keyboard import Key, Listener
+import time
+
+start_time = time.time()
+last_reference_time = time.time()
+REFERENCE_WINDOW_TIME = 0.3
+current_count = 0
+inputs_log = []
 
 def on_press(key):
+    global last_reference_time
+    global current_count
+    global inputs_log
+
     if isinstance(key, Key):
         print('Special key {}'.format(key))
     else:
-        print('{} pressed'.format(key))
+        current_time = time.time()
+
+        print('Time between keyboard inputs: ', current_time - last_reference_time)
+
+        if current_time - last_reference_time > REFERENCE_WINDOW_TIME:
+            inputs_log.append((last_reference_time, current_count))
+
+            current_count = 1
+            last_reference_time = current_time
+        else:
+            current_count += 1
 
 
 def on_release(key):
@@ -22,3 +45,9 @@ if __name__ == '__main__':
             on_release = on_release
     ) as listener:
         listener.join()
+
+
+    inputs_log = np.array(inputs_log)
+    plt.plot(inputs_log[:,0], inputs_log[:,1])
+    plt.show()
+
