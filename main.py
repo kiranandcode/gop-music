@@ -1,6 +1,7 @@
-
 import numpy as np
 import matplotlib.pyplot as plt
+import scipy.fftpack
+
 from pynput.keyboard import Key, Listener
 import time
 
@@ -10,7 +11,10 @@ REFERENCE_WINDOW_TIME = 0.3
 current_count = 0
 inputs_log = []
 
+
 def on_press(key):
+    """
+    """
     global last_reference_time
     global current_count
     global inputs_log
@@ -50,4 +54,9 @@ if __name__ == '__main__':
     inputs_log = np.array(inputs_log)
     plt.plot(inputs_log[:,0], inputs_log[:,1])
     plt.show()
+    yf = scipy.fftpack.fft(inputs_log[:,1])
+    xf = scipy.fftpack.fftfreq(yf.shape[0], REFERENCE_WINDOW_TIME)
+    plt.plot(xf, yf)
+    plt.show()
+
 
