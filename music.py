@@ -4,6 +4,8 @@ import numpy as np
 import scipy.fftpack
 import sounddevice as sd
 from collections import deque
+import math
+import time
 
 class FrequencySelectedEnergyDetector:
 
@@ -108,9 +110,9 @@ class FrequencySelectedEnergyDetector:
                 threshold_values.append(thresholds)
 
             if is_beat(energy, threshold):
-                results.extend([1] * self.block_size)
+                results.append(1)
             else:
-                results.extend([0] * self.block_size)
+                results.append(0)
 
             record_block_energy(energy)
 
@@ -168,7 +170,7 @@ class SoundEnergyDetector:
 
     def transform(self, data):
 
-        n_blocks = data.shape[0] // self.block_size 
+        n_blocks = data.shape[0] // self.block_size
         block_window = deque()
 
         def get_window_average():
@@ -210,7 +212,7 @@ class SoundEnergyDetector:
 
         for block_index in range(n_blocks):
             if self.threshold is None:
-                threshold = -0.0000000000015 * get_window_variance() + 0.5142857
+                threshold = -0.000000000015 * get_window_variance() + 0.3142857
             else:
                 threshold = self.threshold
 
@@ -226,9 +228,9 @@ class SoundEnergyDetector:
                 lower_edge_values.append(-abs(threshold * average))
 
             if abs(energy) > abs(average * threshold):
-                results.extend([1] * self.block_size)
+                results.append(1)
             else:
-                results.extend([0] * self.block_size)
+                results.append(0)
 
             append_block_energy(energy)
 
@@ -246,61 +248,48 @@ class SoundEnergyDetector:
         return np.array(results)
 
 
-filename = "./music/sample.wav"
+def beats_per_interval(raw, block_size, rate, interval):
+    sample_time = 1/rate
+    block_time = block_size * sample_time
 
+    blocks_per_interval = max(int(math.ceil(interval/block_time)),1)
+
+    columns = blocks_per_interval
+    rows = max(int(math.ceil(raw.size / columns)),1)
+
+    raw_padded = np.resize(raw, rows*columns)
+    return np.reshape(np.sum(np.reshape(raw_padded, (rows,columns)), axis=1), (-1,))
+
+
+filename = "./music/sample_2.wav"
 rate, data = wavfile.read(filename)
 
 
 
-MAX_SAMPLE = 200000
-data = data[:MAX_SAMPLE,:]
+# MAX_SAMPLE = 200000
+# data = data[:MAX_SAMPLE,:]
 
-result = FrequencySelectedEnergyDetector(plot_waveform=False).transform(data)
+print('Running Sound Energy Detector')
+start =time.clock()
 result_b = SoundEnergyDetector(plot_waveform=False).transform(data)
+end =time.clock()
+print('Ran in {}'.format(end - start))
+print('Running Frequency Energy Detector')
+start =time.clock()
+result = FrequencySelectedEnergyDetector(plot_waveform=False).transform(data)
+end =time.clock()
+print('Ran in {}'.format(end - start))
 
 
+# plt.plot(np.arange(0, len(result)), result)
+# plt.plot(np.arange(0, len(result_b)), result_b)
+# plt.show()
 
-plt.plot(np.arange(0, len(result)), result)
-plt.plot(np.arange(0, len(result_b)), result_b)
-plt.show()
-
-sd.play(data//30 + np.c_[result,result][:MAX_SAMPLE,:].astype(np.int16) * 5000, rate)
-input('n song')
-sd.play(data//30 + np.c_[result_b,result_b][:MAX_SAMPLE,:].astype(np.int16) * 5000, rate)
-wavfile.write('output_a.wav', rate, data//30 + np.c_[result,result][:MAX_SAMPLE,:].astype(np.int16) * 5000)
-wavfile.write('output_b.wav', rate, data//30 + np.c_[result_b,result_b][:MAX_SAMPLE,:].astype(np.int16) * 5000)
-
-if data.shape[1] == 2:
-    print('Bi-channel data')
-    # average both channels
-    data = np.sum(data, axis=1) / 2
-
-samples = data.shape[0]
-
-seconds = samples/rate
-print('Length of data: {}s'.format(seconds))
-
-
-
-time = np.arange(0, seconds,1/rate)[:MAX_SAMPLE]
-fft_signal = scipy.fftpack.fft(data)
-fft_side = fft_signal[range(samples//2)]
-fft_freqs = scipy.fftpack.fftfreq(samples, 1/rate)
-fft_freqs_side = fft_freqs[range(samples//2)]
-
-print(time.shape, data.shape, fft_freqs.shape, fft_signal.shape, fft_side.shape)
-
-plt.subplot(311)
-plt.plot(time, data)
-plt.xlabel('Time')
-plt.ylabel('Amplitude')
-plt.subplot(312)
-plt.plot(fft_freqs, fft_signal)
-plt.xlabel('Frequency (Hz)')
-plt.ylabel('Count dbl-sided')
-plt.subplot(313)
-plt.plot(fft_freqs_side, abs(fft_side), "b")
-plt.xlabel("Frequency (Hz)")
-plt.ylabel('Count single-sided')
+count_size = 5
+bpm = beats_per_interval(result, 1000, rate, count_size)
+bpm_b = beats_per_interval(result_b, 1000, rate, count_size)
+plt.plot(np.arange(0, len(data)) / rate , data[:,0]//1000)
+plt.plot(np.arange(0, len(bpm)) * count_size, bpm)
+plt.plot(np.arange(0, len(bpm_b)) * count_size, bpm_b)
 plt.show()
 
