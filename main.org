@@ -1,0 +1,11 @@
+* Gop Music
+** Music synced to key-presses
+
+** Components
+*** Music Beat Detection
+*** Keyboard key-press detection
+*** Music Library
+** CLI Interface
+*** -a - add song
+*** -l - list songs
+*** -r - remove song

@@ -11,9 +11,9 @@ REFERENCE_WINDOW_TIME = 0.3
 current_count = 0
 inputs_log = []
 
-
 def on_press(key):
     """
+    Called whenever a key is pressed.
     """
     global last_reference_time
     global current_count
@@ -21,6 +21,7 @@ def on_press(key):
 
     if isinstance(key, Key):
         print('Special key {}'.format(key))
+        Key.alt
     else:
         current_time = time.time()
 

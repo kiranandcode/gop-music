@@ -9,6 +9,8 @@ numpy = "*"
 matplotlib = "*"
 scipy = "*"
 sounddevice = "*"
+tqdm = "*"
+soundfile = "*"
 
 [dev-packages]
 

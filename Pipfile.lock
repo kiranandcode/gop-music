@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "2c21c9d234c81e6b607575e8e426637dfaea4770967acc631b67f74f0f80f5d0"
+            "sha256": "7dbde8759b0b52a2de5780c13131ae64600f2fbe74d72b840c72e97216e4deee"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -223,6 +223,25 @@
             ],
             "index": "pypi",
             "version": "==0.3.13"
+        },
+        "soundfile": {
+            "hashes": [
+                "sha256:181393f8daac38bda997c4284b760bcd726dc0e847f620020d7bf2d3d538a985",
+                "sha256:3f90971bb1884575ada9a0731e878c91cc1ffde14a778f0857deaa2fd04849ac",
+                "sha256:637f6218c867b8cae80f6989634a0813b416b3e6132480d056e6e5a89a921571",
+                "sha256:7fe04272cbfb94ab648acb0db31ace0800f5a4cf46e9d45b4d71ddb15abce1a0",
+                "sha256:80a3d2ed37199ffa7066c097d7b82b8413922e22870b62b54dc264bf0169f4c2"
+            ],
+            "index": "pypi",
+            "version": "==0.10.2"
+        },
+        "tqdm": {
+            "hashes": [
+                "sha256:d385c95361699e5cf7622485d9b9eae2d4864b21cd5a2374a9c381ffed701021",
+                "sha256:e22977e3ebe961f72362f6ddfb9197cc531c9737aaf5f607ef09740c849ecd05"
+            ],
+            "index": "pypi",
+            "version": "==4.31.1"
         }
     },
     "develop": {}

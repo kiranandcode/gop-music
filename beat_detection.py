@@ -15,7 +15,7 @@ class FrequencySelectedEnergyDetector:
             threshold = None,
             window_size = 40,
             frequency_bands = 32,
-            plot_waveform=True
+            plot_waveform=False
     ):
         """
         Class implementing the frequency selection based energy technique for
@@ -95,7 +95,7 @@ class FrequencySelectedEnergyDetector:
         for block_index in range(n_blocks):
 
             if self.threshold is None:
-                threshold = list((-0.00000000000015 * get_window_variance() + 1.6142857).ravel())
+                threshold = list((-0.00000000000015 * get_window_variance() + 1.8142857).ravel())
             else:
                 threshold = [self.threshold] * len(band_energy_history)
 
@@ -182,7 +182,6 @@ class SoundEnergyDetector:
             return current_variance
 
 
-
         def get_block_at_index(block_index):
             lower_bound = min(self.block_size * block_index, data.shape[0])
             upper_bound = min(self.block_size  * block_index + self.block_size, data.shape[0])
@@ -260,36 +259,4 @@ def beats_per_interval(raw, block_size, rate, interval):
     raw_padded = np.resize(raw, rows*columns)
     return np.reshape(np.sum(np.reshape(raw_padded, (rows,columns)), axis=1), (-1,))
 
-
-filename = "./music/sample_2.wav"
-rate, data = wavfile.read(filename)
-
-
-
-# MAX_SAMPLE = 200000
-# data = data[:MAX_SAMPLE,:]
-
-print('Running Sound Energy Detector')
-start =time.clock()
-result_b = SoundEnergyDetector(plot_waveform=False).transform(data)
-end =time.clock()
-print('Ran in {}'.format(end - start))
-print('Running Frequency Energy Detector')
-start =time.clock()
-result = FrequencySelectedEnergyDetector(plot_waveform=False).transform(data)
-end =time.clock()
-print('Ran in {}'.format(end - start))
-
-
-# plt.plot(np.arange(0, len(result)), result)
-# plt.plot(np.arange(0, len(result_b)), result_b)
-# plt.show()
-
-count_size = 5
-bpm = beats_per_interval(result, 1000, rate, count_size)
-bpm_b = beats_per_interval(result_b, 1000, rate, count_size)
-plt.plot(np.arange(0, len(data)) / rate , data[:,0]//1000)
-plt.plot(np.arange(0, len(bpm)) * count_size, bpm)
-plt.plot(np.arange(0, len(bpm_b)) * count_size, bpm_b)
-plt.show()
 
