@@ -1,18 +1,28 @@
+# base library imports
+from argparse import ArgumentParser
+from pathlib import Path
+import __main__ as main
 import json
-from beat_detection import *
-from scipy.io import wavfile
+import os
+import sys
+
+# core-numerical/standard imports
 import pandas as pd
 import soundfile
+
+# cosmetic imports
 from tqdm import tqdm
-from pathlib import Path
-import sys
-import __main__ as main
+
+# library imports
+from beat_detection import *
 
 SCRIPT_NAME = __file__
 DEBUG = bool(os.environ.get('TYPE_MUSIC_DEBUG', False))
 
 if not __file__:
-    SCRIPT_NAME = main.__file__
+    SCRIPT_NAME = str(Path(main.__file__).resolve())
+else:
+    SCRIPT_NAME = str(Path(__file__).resolve())
 
 def custom_error_handler(type, value, traceback):
     # get the name of the script the exception originated from
@@ -21,11 +31,12 @@ def custom_error_handler(type, value, traceback):
     # if from this script, then quit
     if SCRIPT_NAME == file_name or not DEBUG:
         print(
-            'INFO: Script could not complete operation, encountered exception: {}'.format(value), file=sys.stderr
+            'INFO: Script aborted unexpectedly, encountered exception: {}'.format(value),
+            file=sys.stderr,
         )
         return
     else:
-        # otherwise, handle as normal
+        # otherwise, handle as normal (i.e print stacktrace)
         sys.__excepthook__(type, value, traceback)
         return
 
@@ -48,20 +59,28 @@ SAVE_DIR = Path(os.environ.get('TYPE_MUSIC_SAVE_DIR', '~/.typemusic/'))
 SAVE_DIR.mkdir(parents=True,exist_ok=True)
 
 
-def open_savefile(filename):
-    file_path = SAVE_DIR / filename
+def open_saved_mm(filename):
+    file_path = SAVE_DIR / (filename + ".json")
 
     mm = MusicManager()
-    mm.load_from_disk(str(file_path))
+
+    if file_path.exists():
+        mm.load_from_disk(str(file_path))
 
     return mm
+
+def save_new_mm(filename, mm):
+    file_path = SAVE_DIR / (filename + ".json")
+
+
+    mm.save_to_disk(str(file_path))
 
 
 
 
 class MusicManager:
 
-    def __init__(path=None):
+    def __init__(self,path=None):
         if path:
             self.load_from_disk(path)
         else:
@@ -77,7 +96,7 @@ class MusicManager:
             self.fast_snippets = []
             self.base_snippets = []
 
-    def resample_songs(verbose=False):
+    def resample_songs(self, verbose=False):
         # take a copy of the songs list
         songs = self.songs
 
@@ -96,8 +115,68 @@ class MusicManager:
         for song in slist:
             self.add_song(song)
 
+            self.slow_snippets = []
+            self.fast_snippets = []
+            self.base_snippets = []
 
-    def add_song(song):
+
+
+    def remove_song(self, song):
+        self.songs.remove(song)
+
+        self.slow_snippets = [
+            entry for entry in self.slow_snippets if entry['song'] != song
+        ]
+
+        self.base_snippets = [
+            entry for entry in self.base_snippets if entry['song'] != song
+        ]
+
+        self.fast_snippets = [
+            entry for entry in self.fast_snippets if entry['song'] != song
+        ]
+
+
+    def get_snippets(self, song, count=False):
+        snippets, fast, base, slow = [], [], [], []
+        if count:
+            snippets, fast, base, slow = 0, 0, 0, 0
+
+        for entry in self.slow_snippets:
+            if entry['song'] == song:
+                if count:
+                    snippets += 1
+                    slow += 1
+                else:
+                    snippets.append(entry)
+                    slow.append(entry)
+
+        for entry in self.base_snippets:
+            if entry['song'] == song:
+                if count:
+                    snippets += 1
+                    base += 1
+                else:
+                    snippets.append(entry)
+                    base.append(entry)
+
+        for entry in self.fast_snippets:
+            if entry['song'] == song:
+                if count:
+                    snippets += 1
+                    fast += 1
+                else:
+                    snippets.append(entry)
+                    fast.append(entry)
+
+        return snippets, fast, base, slow
+
+
+    def add_song(self, song, verbose=False):
+        if song in self.songs:
+            if verbose:
+                print('INFO: Song {} already exists in library, skipping.'.format(song))
+            return
 
         self.songs.append(song)
 
@@ -118,14 +197,13 @@ class MusicManager:
         # retains the beat value of the current section
         current_beat = beats[0]
         current_start = 0
-        current_is_low = currrent_beat < self.low_base_beat_threshold
+        current_is_low = current_beat < self.low_base_beat_threshold
         current_is_med = current_beat < self.base_high_beat_threshold
 
         i = 1
 
         # loop through the beats
         while i < len(beats):
-            print('beat {}'.format(i))
             # get the beat
             beat = beats[i]
 
@@ -204,7 +282,7 @@ class MusicManager:
             })
 
 
-    def load_from_disk(path):
+    def load_from_disk(self, path):
         with open(path, 'r') as raw_data:
             json_data = json.load(raw_data)
 
@@ -223,7 +301,7 @@ class MusicManager:
         self.base_snippets = json_data['base_snippets']
 
 
-    def save_to_disk(path):
+    def save_to_disk(self, path):
         save_obj = {}
 
         save_obj['songs'] = self.songs
@@ -247,4 +325,107 @@ class MusicManager:
 
 
 if __name__ == '__main__':
+    parser = ArgumentParser(
+        description='Helper script to manage the internal music library used by Type Music.'
+    )
+
+    parser.add_argument(
+        '-p', '--profile', metavar='PROFILE', default='default',
+        help='Type Music can maintain multiple libraries of songs to use for its music source - use this to '
+        'group songs by different moods,etc. Defaults to the default profile.'
+    )
+
+    parser.add_argument(
+        '-s', '--silent', action='store_true',
+        help='Whether to run in silent mode (useful for scripts).'
+    )
+
+    parser.add_argument(
+        'action', metavar='ACTION', choices=['add-song', 'remove-song', 'list-songs', 'list-snippets']
+    )
+
+    args, songs = parser.parse_known_args()
+    profile = args.profile
+    verbose = not args.silent
+
+    mm = open_saved_mm(profile)
+
+    if args.action == 'add-song':
+        if not songs:
+            print('Error: Please provide songs to be loaded.', file=sys.stderr)
+            exit(-1)
+
+        slist = songs
+
+        if verbose:
+            slist = tqdm(slist)
+
+        for song in slist:
+            song = str(Path(song).resolve())
+            mm.add_song(song, verbose=verbose)
+
+        save_new_mm(profile, mm)
+
+    elif args.action == 'remove-song':
+        if not songs:
+            print('Error: Please provide songs to be removed.', file=sys.stderr)
+            exit(-1)
+
+        slist = songs
+        if verbose:
+            slist = tqdm(slist)
+
+
+        for song in slist:
+            mm.remove_song(song)
+
+        save_new_mm(profile, mm)
+
+    elif args.action == 'list-songs':
+        slist = mm.songs
+        if songs:
+            slist = songs
+
+        print('Songs under profile: {}'.format(profile))
+        print('Saved under: {}'.format(str(SAVE_DIR / profile)))
+        print('\t[{:3}]:|{:30}|{:30}|{:30}|{:30}|{:30}'.format(
+            "ind", "Song Name", "Snippets", "Fast", "Base", "Slow"
+        ))
+        for index, song in enumerate(slist):
+            snippets, fast, base, slow = mm.get_snippets(song, count=True)
+            print('\t[{:3}]:|{:30}|{:30}|{:30}|{:30}|{:30}'.format(index,song,snippets, fast, base, slow))
+
+    elif args.action == 'list-snippets':
+        slist = mm.songs
+
+        if songs:
+            slist = songs
+
+        print('Songs under profile: {}'.format(profile))
+        print('Saved under: {}'.format(str(SAVE_DIR / profile)))
+
+
+        for song in slist:
+            snippets, fast, base, slow = mm.get_snippets(song)
+
+            print('Song: {}'.format(song))
+
+            print('\t\t{:3}: {:10} - {:10}: {:10} {:10}'.format("Ind", "Start (s)", "end(s)", "Prev Pace", "Length"))
+            for (name, sel_list) in [('Fast Snippets', fast), ('Base Snippets', base), ('Slow Snippets', slow)]:
+                print('\t{}:'.format(name))
+                for index, snippet in enumerate(sel_list):
+                    start = snippet['start']
+                    end = snippet['end']
+                    from_id = snippet['from']
+
+                    from_str = ''
+                    if from_id == FROM_HIGH:
+                        from_str = 'From High'
+                    elif from_id == FROM_MED:
+                        from_str = 'From Base'
+                    elif from_id == FROM_LOW:
+                        from_str = 'From Low'
+                    length = end - start
+
+                    print('\t\t{:3}: {:10} - {:10}: {:10} {:5}'.format(index, start, end, from_str, length, length))
 
