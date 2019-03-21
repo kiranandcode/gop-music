@@ -2,14 +2,20 @@ import numpy as np
 import matplotlib.pyplot as plt
 import scipy.fftpack
 
-from pynput.keyboard import Key, Listener
 import time
+from threading import Thread
+import queue
+
+from pynput.keyboard import Key, Listener
 
 start_time = time.time()
 last_reference_time = time.time()
 REFERENCE_WINDOW_TIME = 0.3
 current_count = 0
 inputs_log = []
+
+
+
 
 def on_press(key):
     """
@@ -19,14 +25,17 @@ def on_press(key):
     global current_count
     global inputs_log
 
+    # capture special keys
     if isinstance(key, Key):
         print('Special key {}'.format(key))
         Key.alt
     else:
+        # get the current time
         current_time = time.time()
 
         print('Time between keyboard inputs: ', current_time - last_reference_time)
 
+        # de-bounce inputs
         if current_time - last_reference_time > REFERENCE_WINDOW_TIME:
             inputs_log.append((last_reference_time, current_count))
 

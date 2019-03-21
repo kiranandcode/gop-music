@@ -11,6 +11,7 @@ scipy = "*"
 sounddevice = "*"
 tqdm = "*"
 soundfile = "*"
+pygame = "*"
 
 [dev-packages]
 
