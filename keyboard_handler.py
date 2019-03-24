@@ -8,6 +8,53 @@ import queue
 
 from pynput.keyboard import Key, Listener, KeyCode
 
+class BeatVisualizer:
+    """
+    Plots beats from a queue
+    """
+
+    def __init__(self, beat_queue, update_interval=None, window_width = None):
+        self.beat_queue = beat_queue
+        self.update_interval = update_interval
+        self.window_width = window_width
+
+        self.internal_counts = []
+        self.internal_times = []
+
+    def run(self):
+        figure = plt.figure(figsize=(10,10))
+        ax = figure.add_subplot(1,1,1)
+        plt.ion()
+
+        line, = ax.plot(self.internal_times,self.internal_counts)
+        figure.show()
+
+        while True:
+            if self.update_interval:
+                time.sleep(self.update_interval)
+
+            # retrieve the next entry
+            (count, time) = self.beat_queue.get()
+
+            self.internal_times.append(time)
+            self.internal_counts.append(count)
+
+            if self.window_width and len(self.internal_times) > self.window_width:
+                del self.internal_times[0]
+                del self.internal_counts[0]
+
+            # update the line
+            line.set_xdata(self.internal_times)
+            line.set_ydata(self.internal_counts)
+
+            ax.relim()
+            ax.autoscale_view()
+
+            figure.canvas.draw()
+            figure.canvas.flush_events()
+
+            self.beat_queue.task_done()
+
 
 class KeyboardBeatDetector:
 
@@ -17,7 +64,7 @@ class KeyboardBeatDetector:
         self.runner = Thread(
             target=self._run,
         )
-#        self.runner.daemon = True
+        self.runner.daemon = True
 
         if not exit_keys:
             exit_keys = ['ctrl', 'e']
@@ -66,7 +113,12 @@ class KeyboardBeatDetector:
             self.window_count += 1
         else:
             # send out the beat_values
-            self.beat_queue.put((self.window_count, self.window_start))
+            while delta_time > self.window_size:
+                self.beat_queue.put((self.window_count, self.window_start))
+                self.window_count = 0
+                self.window_start += self.window_size
+                delta_time = current_time - self.window_start
+
 
             self.window_count = 1
             self.window_start = current_time
@@ -82,7 +134,7 @@ class KeyboardBeatDetector:
         if key in self.exit_keys:
             self.exit_keys[key] = False
 
-print('Starting thread')
-a = KeyboardBeatDetector()
+a = KeyboardBeatDetector(window_size=1.0)
+bv = BeatVisualizer(a.beat_queue)
+bv.run()
 a.runner.join()
-print('Done thread')
