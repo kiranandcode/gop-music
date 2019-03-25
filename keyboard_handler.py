@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import scipy.fftpack
 
 import time
-from threading import Thread, Event
+from threading import Thread, Event, RLock
 import queue
 
 from pynput.keyboard import Key, Listener, KeyCode
@@ -90,6 +90,7 @@ class KeyboardBeatDetector:
         # local execution variables
         self.window_count = 0
         self.window_start = time.time()
+        self.data_lock = RLock()
 
         self.runner.start()
 
@@ -99,7 +100,20 @@ class KeyboardBeatDetector:
                 on_release = self._on_release
         ) as listener:
             # wait until exit requested
-            self.exit_req.wait()
+            while not self.exit_req.is_set():
+                self.exit_req.wait(self.window_size)
+
+
+                with self.data_lock:
+
+                    current_time = time.time()
+                    delta_time = current_time - self.window_start
+                    while delta_time > self.window_size:
+                            self.beat_queue.put((self.window_count, self.window_start))
+                            self.window_count = 0
+                            self.window_start += self.window_size
+                            delta_time = current_time - self.window_start
+
 
     def _on_press(self, key):
         if key in self.exit_keys:
@@ -107,21 +121,22 @@ class KeyboardBeatDetector:
 
         # record the beat
         current_time = time.time()
-        delta_time = current_time - self.window_start
+        with self.data_lock:
+            delta_time = current_time - self.window_start
 
-        if delta_time < self.window_size:
-            self.window_count += 1
-        else:
-            # send out the beat_values
-            while delta_time > self.window_size:
-                self.beat_queue.put((self.window_count, self.window_start))
-                self.window_count = 0
-                self.window_start += self.window_size
-                delta_time = current_time - self.window_start
+            if delta_time < self.window_size:
+                self.window_count += 1
+            else:
+                # send out the beat_values
+                while delta_time > self.window_size:
+                    self.beat_queue.put((self.window_count, self.window_start))
+                    self.window_count = 0
+                    self.window_start += self.window_size
+                    delta_time = current_time - self.window_start
 
 
-            self.window_count = 1
-            self.window_start = current_time
+                self.window_count = 1
+                self.window_start = current_time
 
         # if all the exit keys are pressed
         # exit the listener
@@ -134,7 +149,7 @@ class KeyboardBeatDetector:
         if key in self.exit_keys:
             self.exit_keys[key] = False
 
-a = KeyboardBeatDetector(window_size=1.0)
+a = KeyboardBeatDetector(window_size=3.0)
 bv = BeatVisualizer(a.beat_queue)
 bv.run()
 a.runner.join()
