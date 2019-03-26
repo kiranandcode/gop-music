@@ -12,6 +12,7 @@ sounddevice = "*"
 tqdm = "*"
 soundfile = "*"
 pygame = "*"
+python-vlc = "*"
 
 [dev-packages]
 

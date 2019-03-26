@@ -104,6 +104,8 @@ class KeyboardBeatDetector:
                 self.exit_req.wait(self.window_size)
 
 
+                # if wait time exceeds without getting
+                # a beat, manually send zero beats
                 with self.data_lock:
 
                     current_time = time.time()
@@ -149,7 +151,7 @@ class KeyboardBeatDetector:
         if key in self.exit_keys:
             self.exit_keys[key] = False
 
-a = KeyboardBeatDetector(window_size=3.0)
-bv = BeatVisualizer(a.beat_queue)
-bv.run()
-a.runner.join()
+# a = KeyboardBeatDetector(window_size=3.0)
+# bv = BeatVisualizer(a.beat_queue)
+# bv.run()
+# a.runner.join()
