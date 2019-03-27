@@ -8,7 +8,7 @@ import time
 from threading import Thread, Event
 import queue
 
-from music_manager import MusicManager
+from music_manager import MusicManager, open_saved_mm
 from keyboard_handler import KeyboardBeatDetector
 import vlc
 
@@ -84,14 +84,17 @@ def play_song(filename, position=None, fadein=3, fadeout=3, callback=None, volum
 
 
 
-class MusicPlayer:
+class KeyBeatMusicPlayer:
     """
-    Plots beats from a queue
+    Buffers keyboard button presses to a beat-based music changer
     """
 
-    def __init__(self, min_change_time=60, window_size=3.0, **kwargs):
+    def __init__(self, beat_changer, min_change_time=60, window_size=3.0, **kwargs):
         # create a keyboard detector
-        self.detector = KeyboardBeatDetector(**kwargs)
+        self.detector = KeyboardBeatDetector(
+            window_size=window_size,
+            **kwargs
+        )
         self.beat_queue = detector.beat_queue
 
         self.last_song_stop = None

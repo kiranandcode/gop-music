@@ -55,11 +55,25 @@ class BeatVisualizer:
 
             self.beat_queue.task_done()
 
+def sanitize_keys(keys):
+    keycodes = []
+    for key in keys:
+        if isinstance(key, str):
+            if len(key) > 1:
+                locals = {'key': None}
+                exec('key = Key.{}'.format(key), None, locals)
+                key = locals['key']
+            else:
+                key = KeyCode.from_char(key)
+        print(type(key), key)
+        keycodes.append(key)
+    return keycodes
+
 
 class KeyboardBeatDetector:
 
 
-    def __init__(self, window_size=None, exit_keys=None):
+    def __init__(self, window_size=None, exit_keys=None, keys_events=None, event_queue=None):
 
         self.runner = Thread(
             target=self._run,
@@ -69,23 +83,27 @@ class KeyboardBeatDetector:
         if not exit_keys:
             exit_keys = ['ctrl', 'e']
 
-        keycodes = []
-        for key in exit_keys:
-            if isinstance(key, str):
-                if len(key) > 1:
-                    locals = {'key': None}
-                    exec('key = Key.{}'.format(key), None, locals)
-                    key = locals['key']
-                else:
-                    key = KeyCode.from_char(key)
-            print(type(key), key)
-            keycodes.append(key)
+
+        # hook up all key-events
+        self.event_map = []
+        for (evnt, keys) in key_events:
+            keycodes = sanitize_keys(keys)
+            self.event_map.append(
+                (evnt,{k: False for k in keycodes})
+            )
+
+        # hook up exit keys
+        keycodes = sanitize_keys(exit_keys)
+        self.exit_keys = {k: False for k in keycodes}
 
         self.window_size = window_size or 2.0
-        self.exit_keys = {k: False for k in keycodes}
         self.exit_req = Event()
 
         self.beat_queue = queue.Queue()
+        if event_queue is None:
+            event_queue = beat_queue
+
+        self.event_queue = event_queue
 
         # local execution variables
         self.window_count = 0
@@ -121,6 +139,17 @@ class KeyboardBeatDetector:
         if key in self.exit_keys:
             self.exit_keys[key] = True
 
+        # if all the exit keys are pressed
+        # exit the listener
+        if all(self.exit_keys.values()):
+            self.exit_req.set()
+
+        for (event, keymap) in self.event_map:
+            if key in keymap:
+                keymap[key] = True
+            if all(keymap.values()):
+                self.event_queue.put(event)
+
         # record the beat
         current_time = time.time()
         with self.data_lock:
@@ -140,16 +169,16 @@ class KeyboardBeatDetector:
                 self.window_count = 1
                 self.window_start = current_time
 
-        # if all the exit keys are pressed
-        # exit the listener
-        if all(self.exit_keys.values()):
-            self.exit_req.set()
-
 
     def _on_release(self, key):
 
         if key in self.exit_keys:
             self.exit_keys[key] = False
+
+        for (event, keymap) in self.event_map:
+            if key in keymap:
+                keymap[key] = False
+
 
 # a = KeyboardBeatDetector(window_size=3.0)
 # bv = BeatVisualizer(a.beat_queue)
