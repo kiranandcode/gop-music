@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import scipy.fftpack
 from pathlib import Path
 from math import ceil
+from abc import ABC, abstractmethod
 
 import time
 from threading import Thread, Event
@@ -81,28 +82,43 @@ def play_song(filename, position=None, fadein=3, fadeout=3, callback=None, volum
 
     return stop_event
 
+self.detector = KeyboardBeatDetector(
+    window_size=window_size,
+    **kwargs
+)
 
+min_change_time=60, window_size=3.0
+int(ceil(beat_changer.min_change_time / beat_changer.window_size) + 1)
 
+class BaseBeatChanger(ABC):
+
+    @abstractmethod
+    def notify_event(self, item):
+        pass
+
+    @abstractmethod
+    def change_music(times, counts):
+        pass
 
 class KeyBeatMusicPlayer:
     """
     Buffers keyboard button presses to a beat-based music changer
     """
 
-    def __init__(self, beat_changer, min_change_time=60, window_size=3.0, **kwargs):
+    def __init__(self, beat_changer,interval_res=0.2, fade_in=3, fade_out=3):
         # create a keyboard detector
-        self.detector = KeyboardBeatDetector(
-            window_size=window_size,
-            **kwargs
-        )
-        self.beat_queue = detector.beat_queue
-
+        self.beat_queue = beat_changer.beat_queue
         self.last_song_stop = None
-        self.min_change_time = min_change_time
-        self.window_size = int(ceil(min_change_time / window_size) + 1)
+
+        self.window_size = beat_changer.window_size
 
         self.internal_counts = []
         self.internal_times = []
+
+        self.beat_changer = beat_changer
+        self.interval_res = interval_res
+        self.fade_in = fade_in
+        self.fade_out = fade_out
 
     def play_song(self, song_name, position=None):
         if self.last_song_stop is not None:
@@ -122,28 +138,38 @@ class KeyBeatMusicPlayer:
         while True:
 
             # retrieve the next entry
-            (count, time) = self.beat_queue.get()
+            next_item = self.beat_queue.get()
 
-            self.internal_times.append(time)
-            self.internal_counts.append(count)
+            # we'll expect 3 types of things from the beat queue
+            # events if the user presses a keybinding
+            # or a result
+            if not isinstance(next_item, tuple):
+                self.beat_changer.notify_event(next_item)
+            else:
+                (count, time) = next_time
 
-            if len(self.internal_times) > window_size:
-                del self.internal_times[0]
-                del self.internal_counts[0]
+                self.internal_times.append(time)
+                self.internal_counts.append(count)
 
+                if len(self.internal_times) > window_size:
+                    del self.internal_times[0]
+                    del self.internal_counts[0]
 
-                # once the window has filled up, we are safe to
-                # try changing the music
+                    # once the window has filled up, we are safe to
+                    # try changing the music
+                    next_music = self.beat_changer.change_music(
+                        self.internal_times,
+                        self.internal_counts
+                    )
 
-                next_music = self.beat_changer.change_music(
-                    self.internal_times,
-                    self.internal_counts
-                )
+                    # if the beat changer requests a music change
+                    if next_music:
+                        song, position = next_music
+                        self.play_song(song, position)
 
-                # if the beat changer requests a music change
-                if next_music:
-                    song, position = next_music
-                    self.play_song(song, position)
+                        # reset the window
+                        self.internal_times = []
+                        self.internal_counts = []
 
 # song_a = './music/sample.wav'
 # song_b = './music/sample_2.wav'
