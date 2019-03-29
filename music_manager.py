@@ -115,11 +115,6 @@ class MusicManager:
         for song in slist:
             self.add_song(song)
 
-            self.slow_snippets = []
-            self.fast_snippets = []
-            self.base_snippets = []
-
-
 
     def remove_song(self, song):
         self.songs.remove(song)
