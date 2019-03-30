@@ -1,20 +1,3 @@
-from abc import ABC, abstractmethod
-
-
-class BaseBeatChanger(ABC):
-
-    @abstractmethod
-    def configure_tracks(self, music_manager):
-        pass
-
-    @abstractmethod
-    def change_music(self, times, counts):
-        pass
-
-    @abstractmethod
-    def notify_event(self, event):
-        pass
-
 # song_a = './music/sample.wav'
 # song_b = './music/sample_2.wav'
 

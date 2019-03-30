@@ -140,6 +140,8 @@ class BeatChangerWrapperPlayer:
 
         # load the beat-changer
         beat_changer.configure_tracks(music_manager)
+        beat_changer.configure_parameters(beat_window_size=beat_window_size, window_size=self.window_size)
+
         self.beat_changer = beat_changer
         self.music_manager = music_manager
 
