@@ -17,6 +17,7 @@ class BeatVisualizer:
 
     def __init__(self, beat_queue, update_interval=None, window_width=None):
         self.beat_queue = beat_queue
+        self.out_queue = queue.Queue()
         self.update_interval = update_interval
         self.window_width = window_width
 
@@ -48,60 +49,64 @@ class BeatVisualizer:
                 time.sleep(self.update_interval)
 
             # retrieve the next entry
-            (count, time) = self.beat_queue.get()
+            next_item = self.beat_queue.get()
+            self.out_queue.put(next_item)
 
-            self.internal_times.append(time)
-            self.internal_counts.append(count)
+            if isinstance(next_item, tuple):
+                (count, time) = next_item
 
-            internal_times = np.array(self.internal_times)
-            internal_counts = np.array(self.internal_counts)
+                self.internal_times.append(time)
+                self.internal_counts.append(count)
 
-
-
-            if self.window_width and len(self.internal_times) > self.window_width:
-                del self.internal_times[0]
-                del self.internal_counts[0]
-                del low_values[0]
-                del high_values[0]
-                del mean_values[0]
-
-            # update the line
-            line.set_xdata(self.internal_times)
-            line.set_ydata(self.internal_counts)
-
-            # add mean values
-            count_mean = np.array(self.internal_counts).mean()
-
-            low_values.append(count_mean * 0.96)
-            high_values.append(count_mean * 1.54) # 1.96
-            mean_values.append(count_mean)
-
-            mean_low.set_xdata(self.internal_times)
-            mean_low.set_ydata(low_values)
-
-            mean_high.set_xdata(self.internal_times)
-            mean_high.set_ydata(high_values)
-
-            mean_line.set_xdata(self.internal_times)
-            mean_line.set_ydata(mean_values)
-
-            if len(self.internal_counts) > 3:
-                flin = interpolate.interp1d(internal_times, internal_counts, kind='cubic')
-                time_resample = np.linspace(internal_times.min(), internal_times.max(), 100)
-                counts_resample = flin(time_resample)
-
-                smooth_line.set_xdata(time_resample)
-                smooth_line.set_ydata(counts_resample)
+                internal_times = np.array(self.internal_times)
+                internal_counts = np.array(self.internal_counts)
 
 
 
-            ax.relim()
-            ax.autoscale_view()
+                if self.window_width and len(self.internal_times) > self.window_width:
+                    del self.internal_times[0]
+                    del self.internal_counts[0]
+                    del low_values[0]
+                    del high_values[0]
+                    del mean_values[0]
 
-            figure.canvas.draw()
-            figure.canvas.flush_events()
+                # update the line
+                line.set_xdata(self.internal_times)
+                line.set_ydata(self.internal_counts)
 
-            self.beat_queue.task_done()
+                # add mean values
+                count_mean = np.array(self.internal_counts).mean()
+
+                low_values.append(count_mean * 0.96)
+                high_values.append(count_mean * 1.54) # 1.96
+                mean_values.append(count_mean)
+
+                mean_low.set_xdata(self.internal_times)
+                mean_low.set_ydata(low_values)
+
+                mean_high.set_xdata(self.internal_times)
+                mean_high.set_ydata(high_values)
+
+                mean_line.set_xdata(self.internal_times)
+                mean_line.set_ydata(mean_values)
+
+                if len(self.internal_counts) > 3:
+                    flin = interpolate.interp1d(internal_times, internal_counts, kind='cubic')
+                    time_resample = np.linspace(internal_times.min(), internal_times.max(), 100)
+                    counts_resample = flin(time_resample)
+
+                    smooth_line.set_xdata(time_resample)
+                    smooth_line.set_ydata(counts_resample)
+
+
+
+                ax.relim()
+                ax.autoscale_view()
+
+                figure.canvas.draw()
+                figure.canvas.flush_events()
+
+                self.beat_queue.task_done()
 
 
 def sanitize_keys(keys):

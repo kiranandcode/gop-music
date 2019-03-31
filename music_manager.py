@@ -101,7 +101,7 @@ class MusicManager:
         result += "\n"
         for song in self.base_snippets:
             result += ('\t\t{}'.format(song))
-            result = "\n"
+            result += "\n"
         result += ('\tHIGH:')
         result += "\n"
         for song in self.fast_snippets:

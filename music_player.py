@@ -5,7 +5,7 @@ from threading import Event, Thread
 
 import vlc
 
-from keyboard_handler import KeyboardBeatDetector
+from keyboard_handler import KeyboardBeatDetector, BeatVisualizer
 from music_manager import open_saved_mm
 
 
@@ -108,7 +108,7 @@ class BeatChangerWrapperPlayer:
             self, beat_changer, music_manager=None,
             beat_window_size=3.0, interval_res=0.2, fade_in=3, fade_out=3,
             min_change_time=60,
-            exit_keys=None, keys_events=None, send_notifications=False
+            exit_keys=None, keys_events=None, send_notifications=False, plot_graph=False
     ):
         if music_manager is None:
             music_manager = open_saved_mm('default')
@@ -120,12 +120,22 @@ class BeatChangerWrapperPlayer:
             keys_events=keys_events,
         )
 
-        # retrieve a beat queue
-        self.beat_queue = self.keyboard_detector.beat_queue
-        self.last_song_stop = None
-
         # calculate the number of beat_windows to include in an analysis time
         self.window_size = int(ceil(min_change_time / beat_window_size) + 1)
+
+        # retrieve a beat queue
+        if plot_graph:
+            self.detector = BeatVisualizer(
+                self.keyboard_detector.beat_queue,
+                window_width=self.window_size,
+            )
+            self.beat_queue = self.detector.out_queue
+            self.beat_thread = Thread(target=self.detector.run)
+            self.beat_thread.start()
+        else:
+            self.beat_queue = self.keyboard_detector.beat_queue
+        self.last_song_stop = None
+
 
         # two variables to keep track of recieved data
         self.internal_counts = []
@@ -170,6 +180,7 @@ class BeatChangerWrapperPlayer:
         return self.beat_changer.change_music(self.internal_times, self.internal_counts)
 
     def notify_event(self, event):
+        send_notification('Sending Notification of {} Music Choice'.format(event))
         # passed an event to indicate quality of last choice
         self.beat_changer.notify_event(event)
 

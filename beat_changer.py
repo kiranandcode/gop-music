@@ -47,7 +47,7 @@ class BasicBeatChanger(BaseBeatChanger):
 
     def play_initial(self):
         value = random.choice(self.low_tracks)
-        return value['song'], value['start']
+        return value[0]['song'], value[0]['start']
 
     def change_music(self, times, counts):
         count_mean = np.array(counts).mean()
@@ -74,25 +74,27 @@ class BasicBeatChanger(BaseBeatChanger):
             else:
                 choice = 'low'
 
+        print('next music choice is {} from {}'.format(choice, self.last_choice))
         if choice != self.last_choice:
             self.last_choice = choice
 
             list = None
             if choice == 'high':
-                list = self.fast_snippets
+                list = self.high_tracks
             elif choice == 'mid':
                 list = self.medium_tracks
             else:
-                list = self.slow_snippets
+                list = self.low_tracks
 
             total_score = sum(i[1] for i in list)
             choice = total_score * np.random.uniform(0, 1)
 
             index = 0
             partial_choice = 0
-            while index < len(list) and partial_choice < choice:
+            while index < len(list) - 1 and partial_choice < choice:
                 partial_choice += list[index][1]
                 index += 1
+            index = max(min(0, index), len(list) - 1)
 
             self.last_selected = list[index]
 
@@ -110,6 +112,6 @@ class BasicBeatChanger(BaseBeatChanger):
                 self.last_selected[1] = max(min(0.0, self.last_selected[1] - 0.1), 3.0)
 
     def configure_tracks(self, music_manager):
-        self.base_snippets = [(i, 1.0) for i in music_manager.base_snippets]
-        self.slow_snippets = [(i, 1.0) for i in music_manager.slow_snippets]
-        self.fast_snippets = [(i, 1.0) for i in music_manager.fast_snippets]
+        self.medium_tracks = [(i, 1.0) for i in music_manager.base_snippets]
+        self.low_tracks = [(i, 1.0) for i in music_manager.slow_snippets]
+        self.high_tracks = [(i, 1.0) for i in music_manager.fast_snippets]

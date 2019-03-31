@@ -30,7 +30,6 @@ if __name__ == '__main__':
     profile = args.profile
 
     music_manager = open_saved_mm(profile)
-    print(music_manager)
 
     beat_changer = BasicBeatChanger()
 
@@ -40,7 +39,7 @@ if __name__ == '__main__':
         exit_keys=['ctrl', 'e'],
         keys_events=[('good', ['ctrl', 'g']), ('bad', ['ctrl', 'b'])],
         send_notifications=True,
+        plot_graph=True
     )
 
     player.run()
-
