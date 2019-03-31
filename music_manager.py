@@ -24,6 +24,7 @@ if not __file__:
 else:
     SCRIPT_NAME = str(Path(__file__).resolve())
 
+
 def custom_error_handler(type, value, traceback):
     # get the name of the script the exception originated from
     file_name = traceback.tb_frame.f_code.co_filename
@@ -40,8 +41,8 @@ def custom_error_handler(type, value, traceback):
         sys.__excepthook__(type, value, traceback)
         return
 
-sys.excepthook = custom_error_handler
 
+sys.excepthook = custom_error_handler
 
 VERSION = 1
 FROM_UNKNOWN = 'unk'  # 0
@@ -56,7 +57,7 @@ BASE_HIGH_BEAT_THRESHOLD = int(os.environ.get('TYPE_MUSIC_BASE_HIGH_BEAT_THRESHO
 SAVE_DIR = Path(os.environ.get('TYPE_MUSIC_SAVE_DIR', '~/.typemusic/'))
 
 # make sure the directory exists
-SAVE_DIR.mkdir(parents=True,exist_ok=True)
+SAVE_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def open_saved_mm(filename):
@@ -69,18 +70,50 @@ def open_saved_mm(filename):
 
     return mm
 
+
 def save_new_mm(filename, mm):
     file_path = SAVE_DIR / (filename + ".json")
-
 
     mm.save_to_disk(str(file_path))
 
 
-
-
 class MusicManager:
+    def __str__(self):
+        result = ""
+        result += ('MusicManager:')
+        result += "\n"
+        result += ('\tVERSION = {}'.format(self.version))
+        result += "\n"
+        result += ('\tBLOCK_SIZE = {}'.format(self.block_size))
+        result += "\n"
+        result += ('\tBEAT_INTERVAL_SIZE = {}'.format(self.beat_interval_size))
+        result += "\n"
+        result += ('\tLOW_BASE_BEAT_THRESHOLD = {}'.format(self.low_base_beat_threshold))
+        result += "\n"
+        result += ('\tBASE_HIGH_BEAT_THRESHOLD = {}'.format(self.base_high_beat_threshold))
+        result += "\n"
+        result += ('\tSLOW:')
+        result += "\n"
+        for song in self.slow_snippets:
+            result += ('\t\t{}'.format(song))
+            result += "\n"
+        result += ('\tMEDIUM:')
+        result += "\n"
+        for song in self.base_snippets:
+            result += ('\t\t{}'.format(song))
+            result = "\n"
+        result += ('\tHIGH:')
+        result += "\n"
+        for song in self.fast_snippets:
+            result += ('\t\t{}'.format(song))
+            result += "\n"
 
-    def __init__(self,path=None):
+        return result
+
+
+
+
+    def __init__(self, path=None):
         if path:
             self.load_from_disk(path)
         else:
@@ -106,7 +139,6 @@ class MusicManager:
         self.fast_snippets = []
         self.base_snippets = []
 
-
         slist = songs
         if verbose:
             slist = tqdm(songs)
@@ -114,7 +146,6 @@ class MusicManager:
         # re add the songs
         for song in slist:
             self.add_song(song)
-
 
     def remove_song(self, song):
         self.songs.remove(song)
@@ -130,7 +161,6 @@ class MusicManager:
         self.fast_snippets = [
             entry for entry in self.fast_snippets if entry['song'] != song
         ]
-
 
     def get_snippets(self, song, count=False):
         snippets, fast, base, slow = [], [], [], []
@@ -165,7 +195,6 @@ class MusicManager:
                     fast.append(entry)
 
         return snippets, fast, base, slow
-
 
     def add_song(self, song, verbose=False):
         if song in self.songs:
@@ -247,7 +276,6 @@ class MusicManager:
 
                 i += 1
 
-
         # if we had more than one entry prior to ending
         if current_start + 1 != i:
             # Once loop is finished, add final section
@@ -276,7 +304,6 @@ class MusicManager:
                 'end': ((i - 1) * self.beat_interval_size),
             })
 
-
     def load_from_disk(self, path):
         with open(path, 'r') as raw_data:
             json_data = json.load(raw_data)
@@ -295,13 +322,11 @@ class MusicManager:
         self.fast_snippets = json_data['fast_snippets']
         self.base_snippets = json_data['base_snippets']
 
-
     def save_to_disk(self, path):
         save_obj = {}
 
         save_obj['songs'] = self.songs
         save_obj['version'] = VERSION
-
 
         save_obj['block_size'] = self.block_size
         save_obj['beat_interval_size'] = self.beat_interval_size
@@ -316,9 +341,6 @@ class MusicManager:
             json.dump(save_obj, raw_file)
 
 
-
-
-
 if __name__ == '__main__':
     parser = ArgumentParser(
         description='Helper script to manage the internal music library used by Type Music.'
@@ -327,7 +349,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '-p', '--profile', metavar='PROFILE', default='default',
         help='Type Music can maintain multiple libraries of songs to use for its music source - use this to '
-        'group songs by different moods,etc. Defaults to the default profile.'
+             'group songs by different moods,etc. Defaults to the default profile.'
     )
 
     parser.add_argument(
@@ -370,7 +392,6 @@ if __name__ == '__main__':
         if verbose:
             slist = tqdm(slist)
 
-
         for song in slist:
             mm.remove_song(song)
 
@@ -388,7 +409,7 @@ if __name__ == '__main__':
         ))
         for index, song in enumerate(slist):
             snippets, fast, base, slow = mm.get_snippets(song, count=True)
-            print('\t[{:3}]:|{:30}|{:30}|{:30}|{:30}|{:30}'.format(index,song,snippets, fast, base, slow))
+            print('\t[{:3}]:|{:30}|{:30}|{:30}|{:30}|{:30}'.format(index, song, snippets, fast, base, slow))
 
     elif args.action == 'list-snippets':
         slist = mm.songs
@@ -398,7 +419,6 @@ if __name__ == '__main__':
 
         print('Songs under profile: {}'.format(profile))
         print('Saved under: {}'.format(str(SAVE_DIR / profile)))
-
 
         for song in slist:
             snippets, fast, base, slow = mm.get_snippets(song)
@@ -423,4 +443,3 @@ if __name__ == '__main__':
                     length = end - start
 
                     print('\t\t{:3}: {:10} - {:10}: {:10} {:5}'.format(index, start, end, from_str, length, length))
-

@@ -1,3 +1,4 @@
+import random
 from abc import ABC, abstractmethod
 
 import numpy as np
@@ -21,6 +22,10 @@ class BaseBeatChanger(ABC):
     def notify_event(self, event):
         pass
 
+    @abstractmethod
+    def play_initial(self):
+        pass
+
 
 BASE_HIGH_RATIO = 1.56
 BASE_MID_RATIO = 0.96
@@ -39,6 +44,10 @@ class BasicBeatChanger(BaseBeatChanger):
 
         self.last_choice = None
         self.last_selected = None
+
+    def play_initial(self):
+        value = random.choice(self.low_tracks)
+        return value['song'], value['start']
 
     def change_music(self, times, counts):
         count_mean = np.array(counts).mean()

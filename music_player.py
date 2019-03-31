@@ -174,6 +174,8 @@ class BeatChangerWrapperPlayer:
         self.beat_changer.notify_event(event)
 
     def run(self):
+        song, start = self.beat_changer.play_initial()
+        self.play_song(song, start)
 
         while True:
 
