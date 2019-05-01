@@ -51,12 +51,16 @@ def play_song(filename, position=None, fadein=3, fadeout=3, callback=None, volum
         sound_length = sound_a.get_length() // 1000
 
         while sound_length == 0:
-            sound_length = sound_a.get_length()
+            sound_length = sound_a.get_length() // 1000
 
         if position is not None:
             # convert position to percentage
+            original_position = position
             position = position / sound_length
             sound_a.set_position(position)
+        else:
+            original_position = 0
+            position = 0
 
         # fade in the song
         if fadein is not None:
@@ -71,7 +75,7 @@ def play_song(filename, position=None, fadein=3, fadeout=3, callback=None, volum
         sound_a.audio_set_volume(int(volume))
 
         # wait for a stop message or for song to end
-        print("Waiting sound_length {} - fade_out {} - position {} = {}".format(sound_length, fadeout, position * sound_length, sound_length - fadeout - position * sound_length))
+        print("Waiting sound_length {} - fade_out {} - position {} (original: {}) = {}".format(sound_length, fadeout, position * sound_length, original_position, (sound_length - fadeout - position * sound_length)))
         stop_event.wait(max(sound_length - fadeout - position * sound_length, 0))
         print("Waiting finished - sound_a.get_position() = {}".format(sound_a.get_position()))
 

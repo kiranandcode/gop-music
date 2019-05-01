@@ -64,15 +64,20 @@ class RatioBeatChanger(BaseBeatChanger):
             else:
                 list = self.low_tracks
 
-            total_score = sum(i[1] for i in list)
+            counter = {}
+            for (song, score) in list:
+                counter.setdefault(song, 0)
+                counter[song] += 1
+
+            total_score = sum(i[1]/counter[i[0]] for i in list)
             choice = total_score * np.random.uniform(0, 1)
 
             index = 0
             partial_choice = 0
             while index < len(list) - 1 and partial_choice < choice:
-                partial_choice += list[index][1]
+                partial_choice += list[index][1] / counter[list[index][0]]
                 index += 1
-            index = max(min(0, index), len(list) - 1)
+            index = min(max(0, index), len(list) - 1)
 
             self.last_selected = list[index]
 

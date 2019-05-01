@@ -4,7 +4,8 @@ import numpy as np
 from beat_changer import BaseBeatChanger
 
 
-
+# Represents the maximum number of beat windows for which the same song can be played
+MAX_REPEAT_COUNT = 3
 BASE_HIGH = 50
 BASE_MID = 40
 
@@ -22,6 +23,7 @@ class FixedBeatChanger(BaseBeatChanger):
 
         self.last_choice = None
         self.last_selected = None
+        self.last_choice_count = 0
 
     def play_initial(self):
         value = random.choice(self.low_tracks)
@@ -55,31 +57,50 @@ class FixedBeatChanger(BaseBeatChanger):
         print(
             'next music choice is {} from {} (high: {}, mid: {}, low: {})'.format(choice, self.last_choice, high, mid, low)
         )
-        if choice != self.last_choice:
+        if choice != self.last_choice and self.last_choice_count > MAX_REPEAT_COUNT:
             self.last_choice = choice
+            self.last_choice_count = 0
 
-            list = None
+            values = None
             if choice == 'high':
-                list = self.high_tracks
+                values = self.high_tracks
             elif choice == 'mid':
-                list = self.medium_tracks
+                values = self.medium_tracks
             else:
-                list = self.low_tracks
+                values = self.low_tracks
 
-            total_score = sum(i[1] for i in list)
-            choice = total_score * np.random.uniform(0, 1)
+            # OLD SELECTION CODE - unfair allocation
+            # total_score = sum(i[1] for i in values)
+            # choice = total_score * np.random.uniform(0, 1)
+
+            # index = 0
+            # partial_choice = 0
+            # while index < len(values) - 1 and partial_choice < choice:
+            #     partial_choice += values[index][1]
+            #     index += 1
+            # index = max(min(0, index), len(values) - 1)
+
+
+            songs = list(set(song['song'] for (song, pos) in values))
+            choice = min(max(int(len(songs) * np.random.uniform(0, 1)), 0), len(songs) - 1)
+            song = songs[choice]
+
+            snippets = [snippet for snippet in values if snippet[0]['song'] == song]
+            total_score = sum(i[1] for i in snippets)
+            choice = total_score * np.random.uniform(0,1)
 
             index = 0
             partial_choice = 0
-            while index < len(list) - 1 and partial_choice < choice:
-                partial_choice += list[index][1]
+            while index < len(snippets) - 1 and partial_choice < choice:
+                partial_choice += snippets[index][1]
                 index += 1
-            index = max(min(0, index), len(list) - 1)
 
-            self.last_selected = list[index]
+            index = min(max(0, index), len(snippets) - 1)
+            self.last_selected = snippets[index]
 
             return self.last_selected[0]['song'], self.last_selected[0]['start']
         else:
+            self.last_choice_count += 1
             # if the last choice was the same as the current, return nothing
             return None
 
@@ -87,9 +108,9 @@ class FixedBeatChanger(BaseBeatChanger):
 
         if self.last_selected is not None:
             if event == 'good':
-                self.last_selected[1] = max(min(0.0, self.last_selected[1] + 0.1), 3.0)
+                self.last_selected[1] = min(max(0.0, self.last_selected[1] + 0.1), 3.0)
             else:
-                self.last_selected[1] = max(min(0.0, self.last_selected[1] - 0.1), 3.0)
+                self.last_selected[1] = min(max(0.0, self.last_selected[1] - 0.1), 3.0)
 
     def configure_tracks(self, music_manager):
         self.medium_tracks = [(i, 1.0) for i in music_manager.base_snippets]

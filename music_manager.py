@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 # base library imports
 from argparse import ArgumentParser
 from pathlib import Path
@@ -209,11 +210,24 @@ class MusicManager:
 
         self.songs.append(song)
 
+        if verbose:
+            print('INFO: Reading song from file')
         data, rate = soundfile.read(song)
+        if verbose:
+            print('INFO: Completed song read. Now transforming using frequency based conversion')
+
         raw_beats = FrequencySelectedEnergyDetector(
-            block_size=self.block_size
+            block_size=self.block_size, verbose=verbose
         ).transform(data)
+
+
+        if verbose:
+            print('INFO: Completed frequency based beat detection. Now grouping by interval.')
+
         beats = beats_per_interval(raw_beats, self.block_size, rate, self.beat_interval_size)
+
+        if verbose:
+            print('INFO: Completed grouping by interval.')
 
         # if empty track, exit
         if len(beats) == 0:
@@ -363,7 +377,8 @@ if __name__ == '__main__':
     )
 
     parser.add_argument(
-        'action', metavar='ACTION', choices=['add-song', 'remove-song', 'list-songs', 'list-snippets']
+        'action', metavar='ACTION', choices=['add-song', 'remove-song', 'list-songs', 'list-snippets'],
+        help='The action to perform. Should be one of: add-song, remove-song, list-songs, list-snippets'
     )
 
     args, songs = parser.parse_known_args()

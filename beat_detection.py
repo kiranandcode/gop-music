@@ -7,6 +7,13 @@ from collections import deque
 import math
 import time
 
+PYFFT_ENABLED = True
+try:
+    import pyfftw
+except ImportError:
+    PYFFT_ENABLED
+    print("INFO: Could not load pyfftw, defaulting to scipy instead.")
+
 BEAT_LOW = 10
 BEAT_MID = 20
 BEAT_HIGH = 30
@@ -19,7 +26,8 @@ class FrequencySelectedEnergyDetector:
             threshold = None,
             window_size = 40,
             frequency_bands = 32,
-            plot_waveform=False
+            plot_waveform=False,
+            verbose=False
     ):
         """
         Class implementing the frequency selection based energy technique for
@@ -35,12 +43,14 @@ class FrequencySelectedEnergyDetector:
 
         :param window_size: the size of the windows of past entries to be used.
 
+        :param verbose: whether the algorithm should print detailed step progress.
         """
         self.block_size = block_size
         self.threshold = threshold
         self.window_size = window_size
         self.frequency_bands = frequency_bands
         self.plot_waveform = plot_waveform
+        self.verbose = verbose
 
 
 
@@ -51,7 +61,16 @@ class FrequencySelectedEnergyDetector:
         n_blocks = data.shape[0] // self.block_size
         band_energy_history = [deque() for i in range(self.frequency_bands)]
 
-        fft_data = scipy.fftpack.fft(data)
+        if self.verbose:
+            print("INFO: Performing fft transform on data")
+
+        if PYFFT_ENABLED:
+            fft_data = pyfftw.interfaces.scipy_fftpack.fft(data)
+        else:
+            fft_data = scipy.fftpack.fft(data)
+
+        if self.verbose:
+            print("INFO: Completed fft transform on data. Now beginning beat detection.")
 
 
         def get_block_at_index(block_index):
@@ -96,6 +115,7 @@ class FrequencySelectedEnergyDetector:
         threshold_values = []
         energy_values = []
 
+
         for block_index in range(n_blocks):
 
             if self.threshold is None:
@@ -120,6 +140,8 @@ class FrequencySelectedEnergyDetector:
 
             record_block_energy(energy)
 
+        if self.verbose:
+            print("INFO: Completed beat detection.")
 
         if self.plot_waveform:
             fig,ax = plt.subplots(figsize=(10,10))
