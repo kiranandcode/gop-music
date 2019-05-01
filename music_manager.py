@@ -18,6 +18,8 @@ from beat_detection import *
 
 SCRIPT_NAME = __file__
 DEBUG = bool(os.environ.get('TYPE_MUSIC_DEBUG', False))
+if DEBUG:
+    print("DEBUG mode enabled.")
 
 if not __file__:
     SCRIPT_NAME = str(Path(main.__file__).resolve())
