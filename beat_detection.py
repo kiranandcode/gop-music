@@ -7,6 +7,10 @@ from collections import deque
 import math
 import time
 
+BEAT_LOW = 10
+BEAT_MID = 20
+BEAT_HIGH = 30
+
 class FrequencySelectedEnergyDetector:
 
     def __init__(

@@ -72,7 +72,9 @@ def play_song(filename, position=None, fadein=3, fadeout=3, callback=None, volum
         sound_a.audio_set_volume(int(volume))
 
         # wait for a stop message or for song to end
-        stop_event.wait(max(sound_length - fadeout, 0))
+        print("Waiting sound_length {} - fade_out {} - position {} = {}".format(sound_length, fadeout, position, sound_length - fadeout - position))
+        stop_event.wait(max(sound_length - fadeout - position, 0))
+        print("Waiting finished - sound_a.get_position() = {}".format(sound_a.get_position()))
 
         # fade out the song
         if sound_a.get_position() < 1.0 and fadeout is not None:
@@ -87,8 +89,12 @@ def play_song(filename, position=None, fadein=3, fadeout=3, callback=None, volum
         sound_a.stop()
 
         # if we stopped due to the song ending, call the callback
+        print("callback {} and not stop_event.is_set() {} = {}".format(callback, not stop_event.is_set(), callback and not stop_event.is_set()))
         if callback and not stop_event.is_set():
+            print("Calling callback")
             callback(filename)
+        elif stop_event.is_set():
+            stop_event.clear()
 
     t = Thread(target=play)
     t.daemon = True
@@ -166,6 +172,9 @@ class BeatChangerWrapperPlayer:
         if self.last_song_stop is not None:
             self.last_song_stop.set()
 
+        if not position:
+            print('play_song called due to timeout')
+
         self.last_song_stop = play_song(
             song,
             position=position,
@@ -220,8 +229,10 @@ class BeatChangerWrapperPlayer:
                         if self.send_notifications:
                             send_notification('Playing {}'.format(song))
 
-                        # reset the window
-                        self.internal_times = []
-                        self.internal_counts = []
                     elif self.send_notifications:
                         send_notification('Continuing Playback of Last Song')
+
+                    # reset the window
+                    self.internal_times = []
+                    self.internal_counts = []
+

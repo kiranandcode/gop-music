@@ -1,5 +1,5 @@
 from argparse import ArgumentParser
-from beat_changer import BasicBeatChanger
+from fixed_beat_changer import FixedBeatChanger
 from music_manager import open_saved_mm
 from music_player import BeatChangerWrapperPlayer
 
@@ -31,7 +31,7 @@ if __name__ == '__main__':
 
     music_manager = open_saved_mm(profile)
 
-    beat_changer = BasicBeatChanger()
+    beat_changer = FixedBeatChanger()
 
     player = BeatChangerWrapperPlayer(
         beat_changer, music_manager=music_manager,

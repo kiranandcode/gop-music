@@ -54,7 +54,7 @@ BLOCK_SIZE = int(os.environ.get('TYPE_MUSIC_BLOCK_SIZE', 1000))
 BEAT_INTERVAL_SIZE = int(os.environ.get('TYPE_MUSIC_BEAT_INTERVAL_SIZE', 2))
 LOW_BASE_BEAT_THRESHOLD = int(os.environ.get('TYPE_MUSIC_LOW_BASE_BEAT_THRESHOLD', 10))
 BASE_HIGH_BEAT_THRESHOLD = int(os.environ.get('TYPE_MUSIC_BASE_HIGH_BEAT_THRESHOLD', 20))
-SAVE_DIR = Path(os.environ.get('TYPE_MUSIC_SAVE_DIR', '~/.typemusic/'))
+SAVE_DIR = Path(os.environ.get('TYPE_MUSIC_SAVE_DIR', '~/.typemusic/')).resolve()
 
 # make sure the directory exists
 SAVE_DIR.mkdir(parents=True, exist_ok=True)

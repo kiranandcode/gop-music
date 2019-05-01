@@ -77,8 +77,10 @@ class BeatVisualizer:
                 # add mean values
                 count_mean = np.array(self.internal_counts).mean()
 
-                low_values.append(count_mean * 0.96)
-                high_values.append(count_mean * 1.54) # 1.96
+                # low_values.append(count_mean * 0.96)
+                # high_values.append(count_mean * 1.54) # 1.96
+                low_values.append(40)
+                high_values.append(50) # 1.96
                 mean_values.append(count_mean)
 
                 mean_low.set_xdata(self.internal_times)
