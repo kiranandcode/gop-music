@@ -52,7 +52,6 @@ def play_song(filename, position=None, fadein=3, fadeout=3, callback=None, volum
 
         while sound_length == 0:
             sound_length = sound_a.get_length()
-        print(sound_length)
 
         if position is not None:
             # convert position to percentage
@@ -72,8 +71,8 @@ def play_song(filename, position=None, fadein=3, fadeout=3, callback=None, volum
         sound_a.audio_set_volume(int(volume))
 
         # wait for a stop message or for song to end
-        print("Waiting sound_length {} - fade_out {} - position {} = {}".format(sound_length, fadeout, position, sound_length - fadeout - position))
-        stop_event.wait(max(sound_length - fadeout - position, 0))
+        print("Waiting sound_length {} - fade_out {} - position {} = {}".format(sound_length, fadeout, position * sound_length, sound_length - fadeout - position * sound_length))
+        stop_event.wait(max(sound_length - fadeout - position * sound_length, 0))
         print("Waiting finished - sound_a.get_position() = {}".format(sound_a.get_position()))
 
         # fade out the song
@@ -170,6 +169,7 @@ class BeatChangerWrapperPlayer:
         :param position: position (in seconds) of the song at which to play
         """
         if self.last_song_stop is not None:
+            print("Playing song - sending stop signal")
             self.last_song_stop.set()
 
         if not position:
