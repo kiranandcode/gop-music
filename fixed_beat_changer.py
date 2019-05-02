@@ -29,7 +29,7 @@ class FixedBeatChanger(BaseBeatChanger):
         value = random.choice(self.low_tracks)
         return value[0]['song'], value[0]['start']
 
-    def change_music(self, times, counts):
+    def change_music(self, times, counts, repeated=False):
         count_mean = np.array(counts).mean()
 
         choice = None
@@ -39,13 +39,15 @@ class FixedBeatChanger(BaseBeatChanger):
             choice = 'low'
         else:
 
+            multiplier = 1
             for time, count in zip(times, counts):
                 if count > BASE_HIGH:
-                    high += 1
+                    high +=  multiplier
                 elif count > BASE_MID:
-                    mid += 1
+                    mid += multiplier
                 else:
-                    low += 1
+                    low += multiplier
+                multiplier *= 1.1
 
             if high > mid and high > low:
                 choice = 'high'
@@ -57,7 +59,11 @@ class FixedBeatChanger(BaseBeatChanger):
         print(
             'next music choice is {} from {} (high: {}, mid: {}, low: {})'.format(choice, self.last_choice, high, mid, low)
         )
-        if choice != self.last_choice and self.last_choice_count > MAX_REPEAT_COUNT:
+
+        if repeated:
+            print('INFO: Song was repeated')
+        print('choice{} != self.last_choice{} or self.last_choice_count{} >= MAX_REPEAT_COUNT{} or repeated{}  == {}'.format(choice, self.last_choice, self.last_choice_count, MAX_REPEAT_COUNT, repeated, choice != self.last_choice or self.last_choice_count >= MAX_REPEAT_COUNT or repeated))
+        if choice != self.last_choice or self.last_choice_count >= MAX_REPEAT_COUNT or repeated:
             self.last_choice = choice
             self.last_choice_count = 0
 
@@ -82,17 +88,31 @@ class FixedBeatChanger(BaseBeatChanger):
 
 
             songs = list(set(song['song'] for (song, pos) in values))
-            choice = min(max(int(len(songs) * np.random.uniform(0, 1)), 0), len(songs) - 1)
+            song_sums = [sum(snippet[1][0] for snippet in values if snippet[0]['song'] == song)/len([snippet[1][0] for snippet in values if snippet[0]['song'] == song]) for song in songs]
+
+            choice = sum(song_sums) * np.random.uniform(0,1)
+
+            index = 0
+            partial_choice = 0
+            for i, value in enumerate(song_sums):
+                partial_choice += value
+                if partial_choice >= choice:
+                    index = i
+                    break
+
+            # choice = min(max(int(len(songs) * np.random.uniform(0, 1)), 0), len(songs) - 1)
+            choice = min(max(int(index), 0), len(songs) - 1)
             song = songs[choice]
+            print('song priority sum: ', song_sums, song)
 
             snippets = [snippet for snippet in values if snippet[0]['song'] == song]
-            total_score = sum(i[1] for i in snippets)
+            total_score = sum(i[1][0] for i in snippets)
             choice = total_score * np.random.uniform(0,1)
 
             index = 0
             partial_choice = 0
             while index < len(snippets) - 1 and partial_choice < choice:
-                partial_choice += snippets[index][1]
+                partial_choice += snippets[index][1][0]
                 index += 1
 
             index = min(max(0, index), len(snippets) - 1)
@@ -108,11 +128,11 @@ class FixedBeatChanger(BaseBeatChanger):
 
         if self.last_selected is not None:
             if event == 'good':
-                self.last_selected[1] = min(max(0.0, self.last_selected[1] + 0.1), 3.0)
+                self.last_selected[1][0] = min(max(0.0, self.last_selected[1][0] + 1.0), 40.0)
             else:
-                self.last_selected[1] = min(max(0.0, self.last_selected[1] - 0.1), 3.0)
+                self.last_selected[1][0] = min(max(0.0, self.last_selected[1][0] - 1.0), 40.0)
 
     def configure_tracks(self, music_manager):
-        self.medium_tracks = [(i, 1.0) for i in music_manager.base_snippets]
-        self.low_tracks = [(i, 1.0) for i in music_manager.slow_snippets]
-        self.high_tracks = [(i, 1.0) for i in music_manager.fast_snippets]
+        self.medium_tracks = [(i, [1.0]) for i in music_manager.base_snippets]
+        self.low_tracks = [(i, [1.0]) for i in music_manager.slow_snippets]
+        self.high_tracks = [(i, [1.0]) for i in music_manager.fast_snippets]

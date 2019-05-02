@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 from argparse import ArgumentParser
 from fixed_beat_changer import FixedBeatChanger
 from music_manager import open_saved_mm

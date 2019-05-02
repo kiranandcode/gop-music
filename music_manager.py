@@ -172,7 +172,7 @@ class MusicManager:
         snippets, fast, base, slow = [], [], [], []
         if count:
             snippets, fast, base, slow = 0, 0, 0, 0
-
+        song = str(Path(song).resolve())
         for entry in self.slow_snippets:
             if entry['song'] == song:
                 if count:
@@ -202,7 +202,7 @@ class MusicManager:
 
         return snippets, fast, base, slow
 
-    def add_song(self, song, verbose=False):
+    def add_song(self, song, verbose=False, mood=None, min_length=None, plot_beats=False):
         if song in self.songs:
             if verbose:
                 print('INFO: Song {} already exists in library, skipping.'.format(song))
@@ -243,7 +243,19 @@ class MusicManager:
         current_is_low = current_beat < self.low_base_beat_threshold
         current_is_med = current_beat < self.base_high_beat_threshold
 
+        if plot_beats:
+            fig,ax = plt.subplots(figsize=(10,10))
+            ax.set_title(song)
+            ax.grid(True)
+            ax.plot(np.arange(0, len(beats)), beats, label='beats')
+            ax.plot([0, len(beats)-1], [ self.low_base_beat_threshold,  self.low_base_beat_threshold], label='low')
+            ax.plot([0, len(beats)-1], [ self.base_high_beat_threshold,  self.base_high_beat_threshold], label='high')
+            ax.legend()
+
+            plt.show()
+
         i = 1
+        new_snippets = 0
 
         # loop through the beats
         while i < len(beats):
@@ -261,7 +273,13 @@ class MusicManager:
                 continue
             else:
                 # if not the same value, then this is the end of the current section.
-                if current_is_low:
+                if mood is not None:
+                    entry_list = {
+                        'low': self.slow_snippets,
+                        'mid': self.base_snippets,
+                        'high': self.fast_snippets
+                    }[mood]
+                elif current_is_low:
                     entry_list = self.slow_snippets
                 elif current_is_med:
                     entry_list = self.base_snippets
@@ -278,27 +296,37 @@ class MusicManager:
                     else:
                         entry_from = FROM_HIGH
 
-                # append the data to the list
-                entry_list.append({
-                    'song': song,
-                    'from': entry_from,
-                    'start': (current_start * self.beat_interval_size),
-                    'end': (i * self.beat_interval_size),
-                })
+                if min_length is None or (i - current_start) * self.beat_interval_size >= min_length:
+                    # append the data to the list
+                    entry_list.append({
+                        'song': song,
+                        'from': entry_from,
+                        'start': (current_start * self.beat_interval_size),
+                        'end': (i * self.beat_interval_size),
+                    })
+                    new_snippets += 1
 
-                # update the variables
-                prev_section_beat = beats[i - 1]
+                    # update the variables
+                    prev_section_beat = beats[i - 1]
+                    current_start = i
+                elif verbose:
+                    print('INFO: Dropped snippet of length {}'.format((i - current_start) * self.beat_interval_size))
+
                 current_beat = beat
-                current_start = i
                 current_is_low = current_beat < self.low_base_beat_threshold
                 current_is_med = current_beat < self.base_high_beat_threshold
-
                 i += 1
 
         # if we had more than one entry prior to ending
         if current_start + 1 != i:
             # Once loop is finished, add final section
-            if current_is_low:
+            if mood is not None:
+                entry_list = {
+                    'low': self.slow_snippets,
+                    'mid': self.base_snippets,
+                    'high': self.fast_snippets
+                }[mood]
+            elif current_is_low:
                 entry_list = self.slow_snippets
             elif current_is_med:
                 entry_list = self.base_snippets
@@ -322,6 +350,25 @@ class MusicManager:
                 'start': (current_start * self.beat_interval_size),
                 'end': ((i - 1) * self.beat_interval_size),
             })
+            new_snippets += 1
+
+        # if we didn't add any snippets, just add one for the whole song
+        if new_snippets == 0 and mood is not None:
+            entry_list = {
+                'low': self.slow_snippets,
+                'mid': self.base_snippets,
+                'high': self.fast_snippets
+            }[mood]
+
+            entry_from = FROM_UNKNOWN
+            entry_list.append({
+                'song': song,
+                'from': entry_from,
+                'start': (0 * self.beat_interval_size),
+                'end': (len(beats) * self.beat_interval_size),
+            })
+
+
 
     def load_from_disk(self, path):
         with open(path, 'r') as raw_data:
@@ -377,13 +424,40 @@ if __name__ == '__main__':
     )
 
     parser.add_argument(
-        'action', metavar='ACTION', choices=['add-song', 'remove-song', 'list-songs', 'list-snippets'],
-        help='The action to perform. Should be one of: add-song, remove-song, list-songs, list-snippets'
+        '-v', '--visualise-beats', action='store_true',
+        help='Whether plot the beats produced by each song. - Requires manual saving'
+    )
+
+
+    parser.add_argument(
+        '--force-mood', '-f', metavar='MOOD', choices=['low', 'mid', 'high'], default=None,
+        help='The beat detection is a bit iffy, so sometimes you may want to manually force a certain mood.'
+    )
+
+    parser.add_argument(
+        '--min-length', '-m', metavar='MIN-LENGTH', default=None,
+        help='Minimum length for a snippet. Snippet lengths aren\'t used when playing, only for the detection \
+        process'
+    )
+
+    parser.add_argument(
+        'action', metavar='ACTION', choices=['add-song', 'remove-song', 'list-songs', 'list-snippets', 'test-run'],
+        help='The action to perform. Should be one of: add-song, remove-song, list-songs, list-snippets, test-run'
     )
 
     args, songs = parser.parse_known_args()
     profile = args.profile
+    mood = args.force_mood
     verbose = not args.silent
+    min_length = args.min_length
+    visualise_beats = args.visualise_beats
+
+    if min_length is not None:
+        try:
+            min_length = float(min_length)
+        except:
+            print('Error: min-length must be a valid number.', file=sys.stderr)
+            exit(-1)
 
     mm = open_saved_mm(profile)
 
@@ -399,9 +473,50 @@ if __name__ == '__main__':
 
         for song in slist:
             song = str(Path(song).resolve())
-            mm.add_song(song, verbose=verbose)
+            mm.add_song(song, verbose=verbose, mood=mood, min_length=min_length, plot_beats=visualise_beats)
 
         save_new_mm(profile, mm)
+
+    elif args.action == 'test-run':
+
+        if not songs:
+            print('Error: Please provide songs to be loaded.', file=sys.stderr)
+            exit(-1)
+
+        mm = MusicManager()
+        slist = songs
+
+        if verbose:
+            slist = tqdm(slist)
+
+        for song in slist:
+            song = str(Path(song).resolve())
+            mm.add_song(song, verbose=verbose, mood=mood, min_length=min_length, plot_beats=visualise_beats)
+
+
+        for song in slist:
+            snippets, fast, base, slow = mm.get_snippets(song)
+
+            print('Song: {}'.format(song))
+
+            print('\t\t{:3}: {:10} - {:10}: {:10} {:10}'.format("Ind", "Start (s)", "end(s)", "Prev Pace", "Length"))
+            for (name, sel_list) in [('Fast Snippets', fast), ('Base Snippets', base), ('Slow Snippets', slow)]:
+                print('\t{}:'.format(name))
+                for index, snippet in enumerate(sel_list):
+                    start = snippet['start']
+                    end = snippet['end']
+                    from_id = snippet['from']
+
+                    from_str = ''
+                    if from_id == FROM_HIGH:
+                        from_str = 'From High'
+                    elif from_id == FROM_MED:
+                        from_str = 'From Base'
+                    elif from_id == FROM_LOW:
+                        from_str = 'From Low'
+                    length = end - start
+
+                    print('\t\t{:3}: {:10} - {:10}: {:10} {:5}'.format(index, start, end, from_str, length, length))
 
     elif args.action == 'remove-song':
         if not songs:

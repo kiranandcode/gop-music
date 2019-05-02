@@ -19,7 +19,7 @@ class BaseBeatChanger(ABC):
         pass
 
     @abstractmethod
-    def change_music(self, times, counts):
+    def change_music(self, times, counts, repeated=False):
         """
         Given a list of times and corresponding beat counts, determines
         whether a new song should be scheduled.

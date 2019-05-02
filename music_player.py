@@ -32,6 +32,7 @@ def play_song(filename, position=None, fadein=3, fadeout=3, callback=None, volum
     :return: a condition object that can be set to stop the playback
     """
     stop_event = Event()
+    print('play_song({}, {})'.format(filename, position))
 
     def play():
         nonlocal position
@@ -96,8 +97,7 @@ def play_song(filename, position=None, fadein=3, fadeout=3, callback=None, volum
         if callback and not stop_event.is_set():
             print("Calling callback")
             callback(filename)
-        elif stop_event.is_set():
-            stop_event.clear()
+
 
     t = Thread(target=play)
     t.daemon = True
@@ -144,6 +144,7 @@ class BeatChangerWrapperPlayer:
         else:
             self.beat_queue = self.keyboard_detector.beat_queue
         self.last_song_stop = None
+        self.current_repeated = False
 
 
         # two variables to keep track of recieved data
@@ -173,11 +174,14 @@ class BeatChangerWrapperPlayer:
         :param position: position (in seconds) of the song at which to play
         """
         if self.last_song_stop is not None:
-            print("Playing song - sending stop signal")
+            print("Playing song - sending stop signal", self.last_song_stop)
             self.last_song_stop.set()
 
         if not position:
-            print('play_song called due to timeout')
+            print('play_song called due to timeout ({}, {})'.format(song, position))
+            self.current_repeated = True
+        else:
+            self.current_repeated = False
 
         self.last_song_stop = play_song(
             song,
@@ -190,7 +194,9 @@ class BeatChangerWrapperPlayer:
 
     def change_music(self):
         # look at beats queue and return a song or none
-        return self.beat_changer.change_music(self.internal_times, self.internal_counts)
+        return self.beat_changer.change_music(
+            self.internal_times, self.internal_counts, self.current_repeated
+        )
 
     def notify_event(self, event):
         send_notification('Sending Notification of {} Music Choice'.format(event))
@@ -229,14 +235,17 @@ class BeatChangerWrapperPlayer:
                     if next_music:
                         song, position = next_music
                         self.play_song(song, position)
+                        print('INFO: Got Next music from beat changer', song, position)
 
                         if self.send_notifications:
                             send_notification('Playing {}'.format(song))
 
-                    elif self.send_notifications:
-                        send_notification('Continuing Playback of Last Song')
+                        # reset the window
+                        self.internal_times = []
+                        self.internal_counts = []
 
-                    # reset the window
-                    self.internal_times = []
-                    self.internal_counts = []
+                    elif self.send_notifications:
+                        # send_notification('Continuing Playback of Last Song')
+                        pass
+
 

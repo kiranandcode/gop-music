@@ -18,6 +18,9 @@ BEAT_LOW = 10
 BEAT_MID = 20
 BEAT_HIGH = 30
 
+BEAT_THRESH_VAR_MULT = -0.00000000000015
+BEAT_THRESH_BASE = 1.8142857
+
 class FrequencySelectedEnergyDetector:
 
     def __init__(
@@ -119,7 +122,7 @@ class FrequencySelectedEnergyDetector:
         for block_index in range(n_blocks):
 
             if self.threshold is None:
-                threshold = list((-0.00000000000015 * get_window_variance() + 1.8142857).ravel())
+                threshold = list((BEAT_THRESH_VAR_MULT * get_window_variance() + BEAT_THRESH_BASE).ravel())
             else:
                 threshold = [self.threshold] * len(band_energy_history)
 
