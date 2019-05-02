@@ -13,6 +13,7 @@ tqdm = "*"
 soundfile = "*"
 pygame = "*"
 python-vlc = "*"
+pyfftw = "*"
 
 [dev-packages]
 

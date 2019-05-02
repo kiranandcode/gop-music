@@ -11,15 +11,19 @@ Gop-Music uses "algorithms and coding" to automatically play music suited your w
 Background music for coding, but done the right way.
 
 ## Screen Shots
-![image]()
+
+![Coding with a graph of key-press beats and the thresholds](https://github.com/Gopiandcode/gop-music/raw/master/example_use.png)
+
+![Example keyboard beat graph](https://github.com/Gopiandcode/gop-music/raw/master/keyboard_beats.png)
 
 
 ## Video
-A video demonstration of gop-music in action can be found here: https://www.youtube.com/watch?v=OG7meAEAAaU
+A video demonstration of gop-music in action can be found [here](https://www.youtube.com/watch?v=OG7meAEAAaU).
 
 
 ### WARNING
 *In the interests of transparency, I should note that the functionality provided by Gop-music can only be achieved by tracking the frequency of key-presses, which, unfortunately, is a feature also used by many malicious applications. While Gop-Music doesn't log the exact keys you press, nor does it share any data with any devices, if you want to use Gop-music, it is strongly advised you read through the source code yourself.*
+
 
 
 
